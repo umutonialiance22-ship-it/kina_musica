@@ -1,48 +1,51 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.utils import timezone
 
 
-# Create your models here.
 class User(AbstractUser):
-    FAN = 'fan'
+    VOCALIST = 'vocalist'
     ARTIST = 'artist'
     ROLE_CHOICES = [
-        (FAN, 'Fan'),
+        (VOCALIST, 'Vocalist'),
         (ARTIST, 'Artist'),
     ]
-    GOOGLE = 'GOOGLE'
-    PHONE = 'PHONE'
-    EMAIL = 'EMAIL'
 
+    GOOGLE = 'google'
+    PHONE = 'phone'
+    EMAIL = 'email'
     AUTH_CHOICES = [
-        (GOOGLE, 'GOOGLE'),
-        (PHONE, 'PHONE'),
-        (EMAIL, 'EMAIL'),
+        (GOOGLE, 'Google'),
+        (PHONE, 'Phone'),
+        (EMAIL, 'Email'),
     ]
-
 
     KINYARWANDA = 'rw'
     SWAHILI = 'sw'
     ENGLISH = 'en'
     FRENCH = 'fr'
     LANGUAGE_CHOICES = [
-        (KINYARWANDA, 'KINYARWANDA'),
-        (SWAHILI, 'SWAHILI'),
-        (ENGLISH, 'ENGLISH'),
-        (FRENCH, 'FRENCH'),
+        (KINYARWANDA, 'Kinyarwanda'),
+        (SWAHILI, 'Swahili'),
+        (ENGLISH, 'English'),
+        (FRENCH, 'French'),
     ]
 
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=FAN)
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=VOCALIST)
     profile_pic = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES, default=ENGLISH)
     auth_provider = models.CharField(max_length=10, choices=AUTH_CHOICES, default=EMAIL)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
 
+    # ✅ ADD THESE THREE LINES — lets Django use email as the login field
+    email = models.EmailField(unique=True)
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username']
+
     def __str__(self):
         return f"{self.username} ({self.role})"
-    
+
+
 class PasswordResetOTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otps')
     otp_code = models.CharField(max_length=6)
@@ -53,6 +56,7 @@ class PasswordResetOTP(models.Model):
     def __str__(self):
         return f"OTP for {self.user.username}"
 
+
 class PayoutDetail(models.Model):
     artist = models.OneToOneField(User, on_delete=models.CASCADE, related_name='payout')
     bank_name = models.CharField(max_length=100)
@@ -62,4 +66,4 @@ class PayoutDetail(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Payout for {self.artist.username}"        
+        return f"Payout for {self.artist.username}"

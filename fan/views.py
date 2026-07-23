@@ -4,7 +4,7 @@ from .models import Favorite, History, Recording, Follower, Comment, Review
 from .serializers import (FavoriteSerializer, HistorySerializer, 
     RecordingSerializer, FollowerSerializer, CommentSerializer, ReviewSerializer)
 
-@extend_schema(tags=['FAN'])
+@extend_schema(tags=['VOCALIST'])
 class FavoriteListCreateView(generics.ListCreateAPIView):
     serializer_class = FavoriteSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -15,7 +15,7 @@ class FavoriteListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(fan=self.request.user)
 
-@extend_schema(tags=['FAN'])
+@extend_schema(tags=['VOCALIST'])
 class HistoryListView(generics.ListAPIView):
     serializer_class = HistorySerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -23,7 +23,7 @@ class HistoryListView(generics.ListAPIView):
     def get_queryset(self):
         return History.objects.filter(fan=self.request.user).order_by('-played_at')
 
-@extend_schema(tags=['FAN'])
+@extend_schema(tags=['VOCALIST'])
 class RecordingListCreateView(generics.ListCreateAPIView):
     serializer_class = RecordingSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -34,7 +34,7 @@ class RecordingListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(fan=self.request.user)
 
-@extend_schema(tags=['FAN'])
+@extend_schema(tags=['VOCALIST'])
 class FollowerListCreateView(generics.ListCreateAPIView):
     serializer_class = FollowerSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -45,7 +45,7 @@ class FollowerListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(fan=self.request.user)
 
-@extend_schema(tags=['FAN'])
+@extend_schema(tags=['VOCALIST'])
 class CommentListCreateView(generics.ListCreateAPIView):
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -57,7 +57,7 @@ class CommentListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(fan=self.request.user)
 
-@extend_schema(tags=['FAN'])
+@extend_schema(tags=['VOCALIST'])
 class ReviewListCreateView(generics.ListCreateAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticated]

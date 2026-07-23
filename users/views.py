@@ -2,19 +2,16 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from .models import User, PasswordResetOTP
-from .serializers import (UserSerializer, RegisterSerializer, LoginSerializer, 
-                          LogoutSerializer, RequestOTPSerializer, VerifyOTPSerializer, 
-                          ResetPasswordSerializer, RequestOTPViewSerializer, VerifyOTPViewSerializer, 
-                          ResetPasswordViewSerializer)
+from .serializers import (UserSerializer, RegisterSerializer, LoginSerializer,
+                           LogoutSerializer, RequestOTPSerializer,
+                           VerifyOTPSerializer, ResetPasswordSerializer)
 import random
 from django.utils import timezone
 from datetime import timedelta
 
 
-@extend_schema(tags=['AUTH'])
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterSerializer
@@ -22,25 +19,16 @@ class RegisterView(generics.CreateAPIView):
 
     @extend_schema(
         summary="Register a new user",
-        description="Creates a new Fan or Artist account and returns JWT tokens.",
+        description="Creates a new Vocalist or Artist account.",
         tags=['AUTH'],
         examples=[
             OpenApiExample(
-                'Fan Registration',
+                'Register Example',
                 value={
-                    'username': 'johndoe',
-                    'email': 'john@gmail.com',
-                    'password': 'securepass123',
-                    'role': 'fan'
-                }
-            ),
-            OpenApiExample(
-                'Artist Registration',
-                value={
-                    'username': 'artistking',
-                    'email': 'artist@gmail.com',
-                    'password': 'securepass123',
-                    'role': 'artist'
+                    'full_name': 'Amoni King',
+                    'email': 'amoni@gmail.com',
+                    'password': 'test1234',
+                    'confirm_password': 'test1234',
                 }
             ),
         ]
@@ -57,53 +45,64 @@ class RegisterView(generics.CreateAPIView):
         }, status=201)
 
 
-class LoginView(generics.GenericAPIView):
-    serializer_class = LoginSerializer
+class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(
         summary="Login",
-        description="Login with username and password. Returns JWT access and refresh tokens.",
-        tags=['AUTH'],
+        description="Login with role, email and password. Returns JWT tokens.",
         request=LoginSerializer,
+        tags=['AUTH'],
         examples=[
             OpenApiExample(
                 'Login Example',
-                value={'username': 'johndoe', 'password': 'securepass123'}
+                value={
+                    'email': 'amoni@gmail.com',
+                    'password': 'test1234',
+                    'role': 'vocalist',
+                }
             )
         ]
     )
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
+        serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        username = serializer.validated_data.get('username')
-        password = serializer.validated_data.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user:
+
+        email = serializer.validated_data['email']
+        password = serializer.validated_data['password']
+        role = serializer.validated_data['role']
+
+        try:
+            user = User.objects.get(email=email)
+            if not user.check_password(password):
+                return Response({'error': 'Invalid credentials'}, status=400)
+
+            # Update role to whatever the user selected at login
+            user.role = role
+            user.save(update_fields=['role'])
+
             refresh = RefreshToken.for_user(user)
             return Response({
                 'user': UserSerializer(user).data,
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
             })
-        return Response({'error': 'Invalid credentials'}, status=400)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=404)
 
 
-class LogoutView(generics.GenericAPIView):
-    serializer_class = LogoutSerializer
+class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @extend_schema(
         summary="Logout",
         description="Blacklists the refresh token to log the user out.",
-        tags=['AUTH'],
         request=LogoutSerializer,
+        tags=['AUTH'],
     )
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        refresh_token = serializer.validated_data.get('refresh')
         try:
+            refresh_token = request.data.get('refresh')
             token = RefreshToken(refresh_token)
             token.blacklist()
             return Response({'message': 'Logged out successfully'})
@@ -111,32 +110,29 @@ class LogoutView(generics.GenericAPIView):
             return Response({'message': 'Logged out'})
 
 
-@extend_schema(tags=['AUTH'])
 class ProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(summary="Get current user profile", tags=['AUTH'])
     def get_object(self):
         return self.request.user
 
 
-class RequestOTPView(generics.GenericAPIView):
-    serializer_class = RequestOTPViewSerializer
+class RequestOTPView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(
         summary="Request password reset OTP",
         description="Sends a 6-digit OTP to the user's email for password reset.",
-        request=RequestOTPViewSerializer,
+        request=RequestOTPSerializer,
         tags=['AUTH'],
         examples=[
-            OpenApiExample('OTP Request', value={'email': 'john@gmail.com'})
+            OpenApiExample('OTP Request', value={'email': 'amoni@gmail.com'})
         ]
     )
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data.get('email')
+        email = request.data.get('email')
         try:
             user = User.objects.get(email=email)
             otp_code = str(random.randint(100000, 999999))
@@ -151,27 +147,24 @@ class RequestOTPView(generics.GenericAPIView):
             return Response({'error': 'User not found'}, status=404)
 
 
-class VerifyOTPView(generics.GenericAPIView):
-    serializer_class = VerifyOTPViewSerializer
+class VerifyOTPView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(
         summary="Verify OTP code",
         description="Verifies the 6-digit OTP sent to the user's email.",
+        request=VerifyOTPSerializer,
         tags=['AUTH'],
-        request=VerifyOTPViewSerializer,
         examples=[
             OpenApiExample(
                 'OTP Verification',
-                value={'email': 'john@gmail.com', 'otp_code': '123456'}
+                value={'email': 'amoni@gmail.com', 'otp_code': '123456'}
             )
         ]
     )
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data.get('email')
-        otp_code = serializer.validated_data.get('otp_code')
+        email = request.data.get('email')
+        otp_code = request.data.get('otp_code')
         try:
             user = User.objects.get(email=email)
             otp = PasswordResetOTP.objects.filter(
@@ -187,15 +180,14 @@ class VerifyOTPView(generics.GenericAPIView):
             return Response({'error': 'Invalid or expired OTP'}, status=400)
 
 
-class ResetPasswordView(generics.GenericAPIView):
-    serializer_class = ResetPasswordViewSerializer
+class ResetPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(
-        summary="Reset password",
-        description="Sets a new password after OTP verification.",
+        summary="Reset password after OTP verification",
+        description="Sets a new password after OTP has been verified.",
+        request=ResetPasswordSerializer,
         tags=['AUTH'],
-        request=ResetPasswordViewSerializer,
         examples=[
             OpenApiExample(
                 'Reset Password',
@@ -204,10 +196,8 @@ class ResetPasswordView(generics.GenericAPIView):
         ]
     )
     def post(self, request):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user_id = serializer.validated_data.get('user_id')
-        new_password = serializer.validated_data.get('new_password')
+        user_id = request.data.get('user_id')
+        new_password = request.data.get('new_password')
         try:
             user = User.objects.get(id=user_id)
             user.set_password(new_password)

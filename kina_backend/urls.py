@@ -23,12 +23,12 @@ from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 class TokenObtainPairViewWithTag(TokenObtainPairView):
-    @extend_schema(tags=['TOKEN'])
+    @extend_schema(tags=['AUTH'])
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
 
 class TokenRefreshViewWithTag(TokenRefreshView):
-    @extend_schema(tags=['TOKEN'])
+    @extend_schema(tags=['AUTH'])
     def post(self, request, *args, **kwargs):
         return super().post(request, *args, **kwargs)
 

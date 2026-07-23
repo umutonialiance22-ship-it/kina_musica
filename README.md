@@ -1,6 +1,6 @@
 # Kina Musica Backend
 
-A Django REST API backend for the Kina Musica application, including user authentication, albums, songs, lyrics, and fan/artist features.
+A Django REST API backend for the Kina Musica application, including user authentication, albums, songs, lyrics, and vocalist/artist features.
 
 ## Features
 

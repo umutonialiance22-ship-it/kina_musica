@@ -21,6 +21,7 @@ class Song(models.Model):
     era = models.CharField(max_length=100, null=True, blank=True)
     difficulty = models.CharField(max_length=10, choices=DIFFICULTY_CHOICES, default=EASY)
     audio_url = models.FileField(upload_to='songs/', null=True, blank=True)
+    beat_url = models.FileField(upload_to='beats/', null=True, blank=True)
     cover_image_url = models.ImageField (upload_to='song_covers/', null=True, blank=True)
     is_live = models.BooleanField(default=False)
     total_streams = models.PositiveIntegerField(default=0)
